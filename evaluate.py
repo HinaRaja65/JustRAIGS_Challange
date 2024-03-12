@@ -23,8 +23,8 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics import roc_curve, roc_auc_score, auc
 
-INPUT_DIRECTORY = "/input"  # You can change this to "test_submission" to run outside Docker, but remember to change it back before building your container
-OUTPUT_DIRECTORY = "/output"  # You can also change this to a local directory to run outside Docker, but remember to change it back
+INPUT_DIRECTORY = "./test/input"  # You can change this to "test_submission" to run outside Docker, but remember to change it back before building your container
+OUTPUT_DIRECTORY = "./test/output"  # You can also change this to a local directory to run outside Docker, but remember to change it back
 INTERMEDIATE_DIRECTORY = Path("/opt/app/intermediate/")
 
 EYE_ID_HEADER = "EYE ID"
@@ -164,30 +164,37 @@ def optional_bool_to_int(optional_bool):
         return int(optional_bool)
 
 def process(task_1_file, task_2_file):
-    gtLabelsDF = pd.read_csv('ground_truth/JustRAIGS_5%TestDataset_labels.csv')
+    gtLabelsDF = pd.read_csv('ground_truth/JustRAIGS_TestDataset_labels.csv')
     task1DF = pd.read_csv(task_1_file)
     task2DF = pd.read_csv(task_2_file)
+    mappingDF = gtLabelsDF[['EYE ID','Final Label','Label G3', 'G1 ANRS', 'G1 ANRI', 'G1 RNFLDS', 'G1 RNFLDI', 'G1 BCLVS',
+    'G1 BCLVI', 'G1 NVT', 'G1 DH', 'G1 LD', 'G1 LC', 'G2 ANRS', 'G2 ANRI',
+    'G2 RNFLDS', 'G2 RNFLDI', 'G2 BCLVS', 'G2 BCLVI', 'G2 NVT', 'G2 DH',
+    'G2 LD', 'G2 LC', 'G3 ANRS', 'G3 ANRI', 'G3 RNFLDS', 'G3 RNFLDI',
+    'G3 BCLVS', 'G3 BCLVI', 'G3 NVT', 'G3 DH', 'G3 LD', 'G3 LC']].copy()
+
+
+    for index, row in task2DF.iterrows():
+        mappingDF.loc[mappingDF['EYE ID'] == row["EYE ID"], [TASK_2_LABEL_HEADERS[0],TASK_2_LABEL_HEADERS[1],
+         TASK_2_LABEL_HEADERS[2], TASK_2_LABEL_HEADERS[3],
+         TASK_2_LABEL_HEADERS[4], TASK_2_LABEL_HEADERS[5],
+         TASK_2_LABEL_HEADERS[6], TASK_2_LABEL_HEADERS[7],
+         TASK_2_LABEL_HEADERS[8], TASK_2_LABEL_HEADERS[9]]] = [row[TASK_2_LABEL_HEADERS[0]], row[TASK_2_LABEL_HEADERS[1]], row[TASK_2_LABEL_HEADERS[2]],
+                                                                  row[TASK_2_LABEL_HEADERS[3]], row[TASK_2_LABEL_HEADERS[4]],
+                                                                  row[TASK_2_LABEL_HEADERS[5]], row[TASK_2_LABEL_HEADERS[6]],
+                                                                  row[TASK_2_LABEL_HEADERS[7]], row[TASK_2_LABEL_HEADERS[8]],
+                                                                  row[TASK_2_LABEL_HEADERS[9]]]
+    #mappingDF.to_csv('Mappings.csv', index=False)
+
     # Mappings
     for index, row in gtLabelsDF.iterrows():
         task1DF.loc[task1DF['EYE ID'] == row["EYE ID"], 'Final Label'] = row["Final Label"]
-        task2DF.loc[task2DF['EYE ID'] == row["EYE ID"], ['Final Label','Label G3', 'G1 ANRS', 'G1 ANRI', 'G1 RNFLDS', 'G1 RNFLDI', 'G1 BCLVS',
-        'G1 BCLVI', 'G1 NVT', 'G1 DH', 'G1 LD', 'G1 LC', 'G2 ANRS', 'G2 ANRI',
-        'G2 RNFLDS', 'G2 RNFLDI', 'G2 BCLVS', 'G2 BCLVI', 'G2 NVT', 'G2 DH',
-        'G2 LD', 'G2 LC', 'G3 ANRS', 'G3 ANRI', 'G3 RNFLDS', 'G3 RNFLDI',
-        'G3 BCLVS', 'G3 BCLVI', 'G3 NVT', 'G3 DH', 'G3 LD', 'G3 LC']] = [row['Final Label'],
-                                                                         row['Label G3'], row['G1 ANRS'], row['G1 ANRI'], row['G1 RNFLDS'],
-                                                                         row['G1 RNFLDI'], row['G1 BCLVS'],
-                                                                         row['G1 BCLVI'], row['G1 NVT'], row['G1 DH'], row['G1 LD'], row['G1 LC'],
-                                                                         row['G2 ANRS'], row['G2 ANRI'],
-                                                                         row['G2 RNFLDS'], row['G2 RNFLDI'], row['G2 BCLVS'],
-                                                                         row['G2 BCLVI'], row['G2 NVT'], row['G2 DH'],
-                                                                         row['G2 LD'], row['G2 LC'], row['G3 ANRS'], row['G3 ANRI'],
-                                                                         row['G3 RNFLDS'], row['G3 RNFLDI'],
-                                                                         row['G3 BCLVS'], row['G3 BCLVI'], row['G3 NVT'], row['G3 DH'],
-                                                                         row['G3 LD'], row['G3 LC']]
+        
+
+
     
-    # task1DF.to_csv('task_1.csv',index=False)
-    # task2DF.to_csv('task_2.csv',index=False)
+    #task1DF.to_csv('task_1.csv',index=False)
+    #task2DF.to_csv('task_2.csv',index=False)
     
     # Calculating Senisitivity
     mask = task1DF['Final Label'] == 'U'
@@ -199,9 +206,9 @@ def process(task_1_file, task_2_file):
     # Calculating Hamming loss
     count = 0
     sum = 0
-    for index, row in task2DF.iterrows():
+    for index, row in mappingDF.iterrows():
         #print("row",row)
-        pred_labels = task2DF.loc[index, TASK_2_LABEL_HEADERS].to_numpy().tolist()
+        pred_labels = mappingDF.loc[index, TASK_2_LABEL_HEADERS].to_numpy().tolist()
         #print("pred_labels", pred_labels)
         if row['Final Label'] == 'RG':
             if row['Label G3'] == 'RG':
